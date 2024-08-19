@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 
 interface Size {
   width: number;
@@ -10,39 +10,66 @@ interface Position {
   y: number;
 }
 
-const useResizable = (initialSize: Size, zoomLevel: number) => {
+interface ResizableProps {
+  initialSize: Size;
+  zoomLevel: number;
+  panPosition: Position;
+  minWidth?: number;
+  minHeight?: number;
+}
+
+const useResizable = ({
+  initialSize,
+  zoomLevel,
+  panPosition,
+  minWidth = 200,
+  minHeight = 150,
+}: ResizableProps) => {
   const [size, setSize] = useState<Size>(initialSize);
   const [isResizing, setIsResizing] = useState<boolean>(false);
+  const [resizeStart, setResizeStart] = useState<Position>({ x: 0, y: 0 });
+  const [resizeInitialSize, setResizeInitialSize] = useState<Size>(initialSize);
 
-  const handleResizeStart = (e: React.MouseEvent<HTMLElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsResizing(true);
-  };
-
-  const handleMouseMove = (e: MouseEvent, position: Position) => {
-    if (isResizing) {
-      setSize({
-        width: Math.max(200, e.clientX / zoomLevel - position.x),
-        height: Math.max(150, e.clientY / zoomLevel - position.y),
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent<HTMLElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsResizing(true);
+      setResizeStart({
+        x: e.clientX,
+        y: e.clientY,
       });
-    }
-  };
+      setResizeInitialSize({ ...size });
+    },
+    [size]
+  );
 
-  const handleMouseUp = () => {
+  const handleResize = useCallback(
+    (e: MouseEvent) => {
+      if (!isResizing) return;
+
+      const dx = (e.clientX - resizeStart.x) / zoomLevel;
+      const dy = (e.clientY - resizeStart.y) / zoomLevel;
+
+      setSize({
+        width: Math.max(minWidth, resizeInitialSize.width + dx),
+        height: Math.max(minHeight, resizeInitialSize.height + dy),
+      });
+    },
+    [isResizing, resizeStart, zoomLevel, resizeInitialSize, minWidth, minHeight]
+  );
+
+  const handleResizeEnd = useCallback(() => {
     setIsResizing(false);
+  }, []);
+
+  return {
+    size,
+    isResizing,
+    handleResizeStart,
+    handleResize,
+    handleResizeEnd,
   };
-
-  useEffect(() => {
-    if (isResizing) {
-      document.addEventListener("mouseup", handleMouseUp);
-      return () => {
-        document.removeEventListener("mouseup", handleMouseUp);
-      };
-    }
-  }, [isResizing]);
-
-  return { size, isResizing, handleResizeStart, handleMouseMove };
 };
 
 export default useResizable;

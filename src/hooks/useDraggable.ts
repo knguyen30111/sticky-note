@@ -5,7 +5,17 @@ interface Position {
   y: number;
 }
 
-const useDraggable = (initialPosition: Position, zoomLevel: number) => {
+interface DraggableProps {
+  initialPosition: Position;
+  zoomLevel: number;
+  panPosition: Position;
+}
+
+const useDraggable = ({
+  initialPosition,
+  zoomLevel,
+  panPosition,
+}: DraggableProps) => {
   const [position, setPosition] = useState<Position>(initialPosition);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
@@ -22,10 +32,11 @@ const useDraggable = (initialPosition: Position, zoomLevel: number) => {
 
   const handleMouseMove = (e: MouseEvent) => {
     if (isDragging) {
-      setPosition({
-        x: e.clientX / zoomLevel - dragOffset.x,
-        y: e.clientY / zoomLevel - dragOffset.y,
-      });
+      const newX =
+        e.clientX / zoomLevel - dragOffset.x - panPosition.x / zoomLevel;
+      const newY =
+        e.clientY / zoomLevel - dragOffset.y - panPosition.y / zoomLevel;
+      setPosition({ x: newX, y: newY });
     }
   };
 
@@ -42,7 +53,7 @@ const useDraggable = (initialPosition: Position, zoomLevel: number) => {
         document.removeEventListener("mouseup", handleMouseUp);
       };
     }
-  }, [isDragging, zoomLevel]);
+  }, [isDragging, zoomLevel, panPosition]);
 
   return { position, isDragging, handleMouseDown };
 };

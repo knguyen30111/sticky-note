@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { X, GripVertical, Maximize2 } from "lucide-react";
+import { X, GripVertical, Maximize2, Minimize2 } from "lucide-react";
 import useDraggable from "../hooks/useDraggable";
 import useResizable from "../hooks/useResizable";
 
@@ -14,6 +14,7 @@ interface StickyNoteProps {
   y: number;
   updatePosition: (id: number, x: number, y: number) => void;
   zoomLevel: number;
+  panPosition: { x: number; y: number };
 }
 
 const StickyNote: React.FC<StickyNoteProps> = ({
@@ -27,17 +28,21 @@ const StickyNote: React.FC<StickyNoteProps> = ({
   y,
   updatePosition,
   zoomLevel,
+  panPosition,
 }) => {
   const [content, setContent] = useState<string>(initialContent);
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
-  const { position, isDragging, handleMouseDown } = useDraggable(
-    { x, y },
-    zoomLevel
-  );
-  const { size, isResizing, handleResizeStart, handleMouseMove } = useResizable(
-    { width: 250, height: 200 },
-    zoomLevel
-  );
+  const { position, isDragging, handleMouseDown } = useDraggable({
+    initialPosition: { x, y },
+    zoomLevel,
+    panPosition,
+  });
+  const { size, isResizing, handleResizeStart, handleResize, handleResizeEnd } =
+    useResizable({
+      initialSize: { width: 250, height: 200 },
+      zoomLevel,
+      panPosition,
+    });
   const noteRef = useRef<HTMLDivElement>(null);
 
   const toggleCollapse = (e: React.MouseEvent) => {
@@ -46,21 +51,19 @@ const StickyNote: React.FC<StickyNoteProps> = ({
   };
 
   useEffect(() => {
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      handleMouseMove(e, position);
-    };
-
-    if (isResizing) {
-      document.addEventListener("mousemove", handleGlobalMouseMove);
-      return () => {
-        document.removeEventListener("mousemove", handleGlobalMouseMove);
-      };
-    }
-  }, [isResizing, position, handleMouseMove]);
-
-  useEffect(() => {
     updatePosition(id, position.x, position.y);
   }, [id, position, updatePosition]);
+
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener("mousemove", handleResize);
+      window.addEventListener("mouseup", handleResizeEnd);
+      return () => {
+        window.removeEventListener("mousemove", handleResize);
+        window.removeEventListener("mouseup", handleResizeEnd);
+      };
+    }
+  }, [isResizing, handleResize, handleResizeEnd]);
 
   return (
     <div
@@ -79,8 +82,11 @@ const StickyNote: React.FC<StickyNoteProps> = ({
         padding: isCollapsed ? "0 8px" : "8px",
       }}
       onMouseDown={(e) => {
-        handleMouseDown(e);
-        onFocus();
+        if (e.button !== 2) {
+          // Not right-click
+          handleMouseDown(e);
+          onFocus();
+        }
       }}
     >
       {isCollapsed ? (
@@ -111,7 +117,7 @@ const StickyNote: React.FC<StickyNoteProps> = ({
               className="text-gray-600 hover:text-gray-800 focus:outline-none"
               onClick={toggleCollapse}
             >
-              <GripVertical size={16} />
+              <Minimize2 size={16} />
             </button>
             <button
               className="text-gray-600 hover:text-gray-800 focus:outline-none"
