@@ -5,7 +5,17 @@ interface Position {
   y: number;
 }
 
-const useDraggable = (initialPosition: Position) => {
+interface DraggableProps {
+  initialPosition: Position;
+  zoomLevel: number;
+  panPosition: Position;
+}
+
+const useDraggable = ({
+  initialPosition,
+  zoomLevel,
+  panPosition,
+}: DraggableProps) => {
   const [position, setPosition] = useState<Position>(initialPosition);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
@@ -15,17 +25,18 @@ const useDraggable = (initialPosition: Position) => {
     const rect = target.getBoundingClientRect();
     setIsDragging(true);
     setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: (e.clientX - rect.left) / zoomLevel,
+      y: (e.clientY - rect.top) / zoomLevel,
     });
   };
 
   const handleMouseMove = (e: MouseEvent) => {
     if (isDragging) {
-      setPosition({
-        x: e.clientX - dragOffset.x,
-        y: e.clientY - dragOffset.y,
-      });
+      const newX =
+        e.clientX / zoomLevel - dragOffset.x - panPosition.x / zoomLevel;
+      const newY =
+        e.clientY / zoomLevel - dragOffset.y - panPosition.y / zoomLevel;
+      setPosition({ x: newX, y: newY });
     }
   };
 
@@ -42,7 +53,7 @@ const useDraggable = (initialPosition: Position) => {
         document.removeEventListener("mouseup", handleMouseUp);
       };
     }
-  }, [isDragging]);
+  }, [isDragging, zoomLevel, panPosition]);
 
   return { position, isDragging, handleMouseDown };
 };
