@@ -10,7 +10,7 @@ interface Position {
   y: number;
 }
 
-const useResizable = (initialSize: Size) => {
+const useResizable = (initialSize: Size, zoomLevel: number) => {
   const [size, setSize] = useState<Size>(initialSize);
   const [isResizing, setIsResizing] = useState<boolean>(false);
 
@@ -23,8 +23,8 @@ const useResizable = (initialSize: Size) => {
   const handleMouseMove = (e: MouseEvent, position: Position) => {
     if (isResizing) {
       setSize({
-        width: Math.max(200, e.clientX - position.x),
-        height: Math.max(150, e.clientY - position.y),
+        width: Math.max(200, e.clientX / zoomLevel - position.x),
+        height: Math.max(150, e.clientY / zoomLevel - position.y),
       });
     }
   };

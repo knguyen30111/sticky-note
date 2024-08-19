@@ -1,31 +1,42 @@
 import React, { useState, useRef, useEffect } from "react";
-import { X, GripVertical, Maximize2, Minimize2 } from "lucide-react";
+import { X, GripVertical, Maximize2 } from "lucide-react";
 import useDraggable from "../hooks/useDraggable";
 import useResizable from "../hooks/useResizable";
 
 interface StickyNoteProps {
+  id: number;
   initialContent: string;
   onDelete: () => void;
   color: string;
   zIndex: number;
   onFocus: () => void;
+  x: number;
+  y: number;
+  updatePosition: (id: number, x: number, y: number) => void;
+  zoomLevel: number;
 }
 
 const StickyNote: React.FC<StickyNoteProps> = ({
+  id,
   initialContent,
   onDelete,
   color,
   zIndex,
   onFocus,
+  x,
+  y,
+  updatePosition,
+  zoomLevel,
 }) => {
   const [content, setContent] = useState<string>(initialContent);
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
-  const { position, isDragging, handleMouseDown } = useDraggable({
-    x: 100,
-    y: 100,
-  });
+  const { position, isDragging, handleMouseDown } = useDraggable(
+    { x, y },
+    zoomLevel
+  );
   const { size, isResizing, handleResizeStart, handleMouseMove } = useResizable(
-    { width: 250, height: 200 }
+    { width: 250, height: 200 },
+    zoomLevel
   );
   const noteRef = useRef<HTMLDivElement>(null);
 
@@ -46,6 +57,10 @@ const StickyNote: React.FC<StickyNoteProps> = ({
       };
     }
   }, [isResizing, position, handleMouseMove]);
+
+  useEffect(() => {
+    updatePosition(id, position.x, position.y);
+  }, [id, position, updatePosition]);
 
   return (
     <div
@@ -96,7 +111,7 @@ const StickyNote: React.FC<StickyNoteProps> = ({
               className="text-gray-600 hover:text-gray-800 focus:outline-none"
               onClick={toggleCollapse}
             >
-              <Minimize2 size={16} />
+              <GripVertical size={16} />
             </button>
             <button
               className="text-gray-600 hover:text-gray-800 focus:outline-none"
